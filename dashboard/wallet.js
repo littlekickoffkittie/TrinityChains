@@ -20,20 +20,18 @@ async function createWallet() {
     }
 }
 
-// Load a wallet from a file
-function loadWallet(file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        try {
-            const wallet = JSON.parse(event.target.result);
-            walletAddress = wallet.address;
-            secretKey = wallet.secret_key;
-            updateWalletUI();
-        } catch (error) {
-            console.error('[loadWallet] Error:', error);
-        }
+// Load a wallet from JSON
+function loadWallet(json) {
+    try {
+        const wallet = JSON.parse(json);
+        walletAddress = wallet.address;
+        secretKey = wallet.secret_key;
+        updateWalletUI();
+        document.getElementById('loadWalletModal').style.display = 'none';
+    } catch (error) {
+        console.error('[loadWallet] Error:', error);
+        alert('Invalid wallet JSON.');
     }
-    reader.readAsText(file);
 }
 
 // Update the wallet UI
