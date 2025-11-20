@@ -60,48 +60,34 @@ h1 {
     margin-top: 5px;
 }
 
-.genesis-block {
-    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%);
-    border: 2px solid var(--tg-theme-link-color);
-    border-radius: 15px;
-    padding: 20px;
+.tab-container {
+    width: 100%;
     margin-bottom: 20px;
-    text-align: center;
 }
 
-.genesis-block h2 {
-    color: var(--tg-theme-link-color);
-    margin-bottom: 15px;
-    font-size: 1.2rem;
-}
-
-.headline {
+.tab-header {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 20px 0;
+    border-bottom: 2px solid var(--tg-theme-button-color);
 }
 
-.quote-mark {
-    font-size: 4rem;
-    color: #00ff88;
-    opacity: 0.3;
-    line-height: 0.5;
-}
-
-.headline p {
-    font-size: 1.1rem;
-    font-style: italic;
+.tab-link {
+    background-color: transparent;
+    border: none;
     color: var(--tg-theme-text-color);
-    max-width: 100%;
-    line-height: 1.5;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
 }
 
-.source {
-    color: var(--tg-theme-hint-color);
-    font-size: 0.85rem;
-    margin-top: 10px;
+.tab-link.active {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+}
+
+.tab-content {
+    display: none;
+    padding: 20px 0;
 }
 
 .stats-grid {
@@ -337,6 +323,65 @@ footer a:hover {
     font-size: 0.9rem;
     margin-right: 10px;
     transition: all 0.3s;
+}
+
+.wallet-container {
+    background: var(--tg-theme-secondary-bg-color);
+    border: 1px solid var(--tg-theme-button-color);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.wallet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.wallet-actions button {
+    margin-left: 10px;
+}
+
+.send-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2rem;
+}
+
+.mining-rig-container {
+    background: var(--tg-theme-secondary-bg-color);
+    border: 1px solid var(--tg-theme-button-color);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.mining-rig-header {
+    margin-bottom: 20px;
+}
+
+#minerAddressInput {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.mining-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.mining-actions button {
+    flex-grow: 1;
+    margin: 0 5px;
+}
+
+#walletJsonInput {
+    width: 100%;
+    height: 150px;
+    margin-bottom: 10px;
 }
 
 #walletControls button:hover, #miningControls button:hover {

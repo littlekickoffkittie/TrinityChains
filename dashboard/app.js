@@ -330,12 +330,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const createWalletButton = document.getElementById('createWalletButton');
     const loadWalletButton = document.getElementById('loadWalletButton');
     const sendButton = document.getElementById('sendButton');
-    const walletFileInput = document.getElementById('walletFileInput');
+    const loadWalletModal = document.getElementById('loadWalletModal');
+    const loadWalletFromJsonButton = document.getElementById('loadWalletFromJsonButton');
+    const walletJsonInput = document.getElementById('walletJsonInput');
 
     createWalletButton.addEventListener('click', createWallet);
-    loadWalletButton.addEventListener('click', () => walletFileInput.click());
-    walletFileInput.addEventListener('change', (event) => loadWallet(event.target.files[0]));
+    loadWalletButton.addEventListener('click', () => loadWalletModal.style.display = 'block');
+    loadWalletFromJsonButton.addEventListener('click', () => loadWallet(walletJsonInput.value));
     sendButton.addEventListener('click', sendTransaction);
+
+    // Modal close logic
+    const modals = document.getElementsByClassName('modal');
+    for (let i = 0; i < modals.length; i++) {
+        const modal = modals[i];
+        const closeButton = modal.querySelector('.close-button');
+        closeButton.onclick = function() {
+            modal.style.display = 'none';
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    }
 
     initPriceChart();
 });
@@ -447,4 +464,19 @@ async function initPriceChart() {
             priceChart.update();
         }
     }, 60000);
+}
+
+// Tab functionality
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tab-link");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
 }

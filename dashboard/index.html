@@ -24,75 +24,87 @@
             <p class="tagline">Triangle-Based Blockchain Explorer</p>
         </header>
 
-        <div class="genesis-block">
-            <h2>Genesis Block</h2>
-            <div class="headline">
-                <span class="quote-mark">"</span>
-                <p>Stock market closes mixed to cap volatile week as Fed cut in doubt</p>
-                <span class="quote-mark">"</span>
+        <div class="tab-container">
+            <div class="tab-header">
+                <button class="tab-link active" onclick="openTab(event, 'explorer')">Block Explorer</button>
+                <button class="tab-link" onclick="openTab(event, 'dashboard')">Mining Dashboard</button>
             </div>
-            <p class="source">— Yahoo Finance, November 15, 2025</p>
-        </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Block Height</h3>
-                <p class="stat-value" id="blockHeight">Loading...</p>
-            </div>
-            <div class="stat-card">
-                <h3>Total Triangles</h3>
-                <p class="stat-value" id="totalTriangles">Loading...</p>
-            </div>
-            <div class="stat-card">
-                <h3>Difficulty</h3>
-                <p class="stat-value" id="difficulty">Loading...</p>
-            </div>
-            <div class="stat-card">
-                <h3>Total Area</h3>
-                <p class="stat-value" id="totalArea">Loading...</p>
-            </div>
-        </div>
+            <div id="explorer" class="tab-content" style="display: block;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Block Height</h3>
+                        <p class="stat-value" id="blockHeight">Loading...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Triangles</h3>
+                        <p class="stat-value" id="totalTriangles">Loading...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Difficulty</h3>
+                        <p class="stat-value" id="difficulty">Loading...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Area</h3>
+                        <p class="stat-value" id="totalArea">Loading...</p>
+                    </div>
+                </div>
 
-        <div class="section">
-            <h2>Block Explorer</h2>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by Block Height or Hash">
-                <button id="searchButton">Search</button>
-            </div>
-            <div id="searchResults"></div>
-        </div>
+                <div class="section">
+                    <h2>Block Explorer</h2>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Search by Block Height or Hash">
+                        <button id="searchButton">Search</button>
+                    </div>
+                    <div id="searchResults"></div>
+                </div>
 
-        <div class="section">
-            <h2>Recent Blocks</h2>
-            <div id="recentBlocks" class="blocks-list">
-                <p class="loading">Loading blocks...</p>
-            </div>
-        </div>
+                <div class="section">
+                    <h2>Recent Blocks</h2>
+                    <div id="recentBlocks" class="blocks-list">
+                        <p class="loading">Loading blocks...</p>
+                    </div>
+                </div>
 
-        
-        <div class="section">
-            <h2>Wallet</h2>
-            <div id="walletControls">
-                <p>Address: <span id="walletAddress">Not Loaded</span></p>
-                <p>Balance: <span id="walletBalance">0</span> Triangles</p>
-                <input type="file" id="walletFileInput" style="display: none;">
-                <button id="createWalletButton">Create Wallet</button>
-                <button id="loadWalletButton">Load Wallet</button>
-                <button id="sendButton">Send</button>
+                <div class="section">
+                    <h2>Market Data</h2>
+                    <canvas id="priceChart"></canvas>
+                </div>
             </div>
-        </div>
 
-        <div class="section">
-            <h2>Mining Controls</h2>
-            <div id="miningControls">
-                <p>Miner Address: <span id="minerAddress">Not Set</span></p>
-                <input type="text" id="minerAddressInput" placeholder="Enter Miner Address" size="68" style="width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background-color: #2b2b40; border: 1px solid #00ff88; color: #fff;">
-                <button id="loadCliWalletButton" style="padding: 10px 15px; background: #0088ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;">Load Wallet (CLI)</button>
-                <button id="startMiningButton" style="padding: 10px 15px; background: #00ff88; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;">Start Mining</button>
-                <button id="stopMiningButton" style="padding: 10px 15px; background: #ff0044; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Stop Mining</button>
-                <p>Mining Status: <span id="miningStatus">Inactive</span></p>
-                <p>Blocks Mined (Session): <span id="blocksMined">0</span></p>
-                <p>Hashrate: <span id="hashRate">0.0 H/s</span></p>
+            <div id="dashboard" class="tab-content">
+                <div class="wallet-container">
+                    <div class="wallet-header">
+                        <h2>My Wallet</h2>
+                        <div class="wallet-actions">
+                            <button id="createWalletButton">Create</button>
+                            <button id="loadWalletButton">Load</button>
+                        </div>
+                    </div>
+                    <div class="wallet-info">
+                        <p><strong>Address:</strong> <span id="walletAddress">Not Loaded</span></p>
+                        <p><strong>Balance:</strong> <span id="walletBalance">0</span> Triangles</p>
+                    </div>
+                    <button id="sendButton" class="send-button">Send Transaction</button>
+                </div>
+
+                <div class="mining-rig-container">
+                    <div class="mining-rig-header">
+                        <h2>Mining Rig</h2>
+                    </div>
+                    <div id="miningControls">
+                        <p><strong>Miner Address:</strong> <span id="minerAddress">Not Set</span></p>
+                        <input type="text" id="minerAddressInput" placeholder="Enter Miner Address">
+                        <button id="loadCliWalletButton">Load Wallet (CLI)</button>
+                        <div class="mining-actions">
+                            <button id="startMiningButton">Start Mining</button>
+                            <button id="stopMiningButton">Stop Mining</button>
+                        </div>
+                        <p><strong>Status:</strong> <span id="miningStatus">Inactive</span></p>
+                        <p><strong>Blocks Mined (Session):</strong> <span id="blocksMined">0</span></p>
+                        <p><strong>Hashrate:</strong> <span id="hashRate">0.0 H/s</span></p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -146,6 +158,15 @@
             <span class="close-button">&times;</span>
             <h2>Block Details</h2>
             <div id="blockDetailsContent"></div>
+        </div>
+    </div>
+
+    <div id="loadWalletModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Load Wallet</h2>
+            <textarea id="walletJsonInput" placeholder="Paste wallet JSON here"></textarea>
+            <button id="loadWalletFromJsonButton">Load</button>
         </div>
     </div>
 
