@@ -316,7 +316,7 @@ const INITIAL_MINING_REWARD: u64 = 1000;
 
 /// Halving interval - reward halves every 210,000 blocks (~4 years at 1 minute blocks)
 /// This matches Bitcoin's ~4 year halving cycle
-const REWARD_HALVING_INTERVAL: BlockHeight = 210_000;
+pub const REWARD_HALVING_INTERVAL: BlockHeight = 210_000;
 
 /// Maximum number of halvings before reward becomes 0 (64 halvings)
 const MAX_HALVINGS: u64 = 64;

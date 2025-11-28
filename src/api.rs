@@ -13,6 +13,7 @@ use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
+use chrono::Utc;
 
 use crate::blockchain::{Block, Blockchain};
 use crate::crypto::KeyPair;
@@ -132,9 +133,25 @@ pub struct BalanceResponse {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StatsResponse {
-    pub height: u64,
+    pub chain_height: u64,
     pub mempool_size: usize,
+    pub blocks_mined: u64,
+    pub difficulty: u64,
+    pub total_earned: u64,
+    pub current_reward: u64,
+    pub avg_block_time: f64,
+    pub uptime: u64,
+    pub total_supply: u64,
+    pub max_supply: u64,
+    pub halving_era: u64,
+    pub blocks_to_halving: u64,
+}
+
+#[derive(Serialize)]
+pub struct BlocksResponse {
+    pub blocks: Vec<Block>,
 }
 
 pub async fn run_api_server(node: Arc<Node>) {
@@ -188,15 +205,63 @@ async fn get_blockchain_height(State(node): State<Arc<Node>>) -> impl IntoRespon
 
 async fn get_recent_blocks(State(node): State<Arc<Node>>) -> impl IntoResponse {
     let blockchain = node.blockchain.read().await;
-    let blocks: Vec<_> = blockchain.blocks.iter().rev().take(10).cloned().collect();
-    Json(blocks)
+    let blocks: Vec<_> = blockchain.blocks.iter().rev().take(50).cloned().collect();
+    Json(BlocksResponse { blocks })
 }
 
 async fn get_blockchain_stats(State(node): State<Arc<Node>>) -> impl IntoResponse {
     let blockchain = node.blockchain.read().await;
+
+    if blockchain.blocks.is_empty() {
+        return Json(StatsResponse {
+            chain_height: 0,
+            mempool_size: 0,
+            blocks_mined: 0,
+            difficulty: 0,
+            total_earned: 0,
+            current_reward: 0,
+            avg_block_time: 0.0,
+            uptime: 0,
+            total_supply: 0,
+            max_supply: crate::blockchain::MAX_SUPPLY,
+            halving_era: 0,
+            blocks_to_halving: crate::blockchain::REWARD_HALVING_INTERVAL,
+        });
+    }
+
+    let last_block = blockchain.blocks.last().unwrap(); // Safe to unwrap here
+    let height = last_block.header.height;
+    let total_supply = Blockchain::calculate_current_supply(height);
+
+    // Calculate average block time from the last 100 blocks for more accuracy
+    let window_size = 100.min(blockchain.blocks.len());
+    let avg_block_time = if window_size > 1 {
+        let last = last_block.header.timestamp;
+        let first = blockchain.blocks[blockchain.blocks.len() - window_size].header.timestamp;
+        (last - first) as f64 / (window_size - 1) as f64
+    } else {
+        0.0
+    };
+
+    let uptime = if let Some(genesis) = blockchain.blocks.first() {
+        Utc::now().timestamp() - genesis.header.timestamp
+    } else {
+        0
+    };
+
     let stats = StatsResponse {
-        height: blockchain.blocks.len() as u64,
+        chain_height: height,
         mempool_size: blockchain.mempool.len(),
+        blocks_mined: node.blocks_mined.load(Ordering::Relaxed),
+        difficulty: blockchain.difficulty,
+        total_earned: total_supply,
+        current_reward: Blockchain::calculate_block_reward(height),
+        avg_block_time,
+        uptime: uptime as u64,
+        total_supply,
+        max_supply: crate::blockchain::MAX_SUPPLY,
+        halving_era: blockchain.current_halving_era(),
+        blocks_to_halving: blockchain.blocks_until_next_halving(),
     };
     Json(stats)
 }
