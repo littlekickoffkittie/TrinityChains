@@ -1,9 +1,0 @@
-Vercel CLI 48.10.2
-Retrieving project…
-Deploying starjamisom-2642s-projects/dashboard
-Uploading [--------------------] (0.0B/16.2KB)
-Uploading [=========-----------] (7.7KB/16.2KB)
-Uploading [==========----------] (8.6KB/16.2KB)
-Uploading [====================] (16.2KB/16.2KB)
-Error: Git author dxvxnl@gmail.com must have access to the team starjamisom-2642's projects on Vercel to create deployments.
-Learn more: https://vercel.com/docs/deployments/troubleshoot-project-collaboration
