@@ -4,7 +4,7 @@
  */
 
 class TrinityChainAPI {
-  constructor(nodeUrl = 'http://localhost:3000') {
+  constructor(nodeUrl = 'http://localhost:8080') {
     this.nodeUrl = nodeUrl.replace(/\/$/, ''); // Remove trailing slash
   }
 

@@ -8,7 +8,7 @@ const TrinityChainDashboard = () => {
     const [blocks, setBlocks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [nodeUrl, setNodeUrl] = useState('http://localhost:3000');
+    const [nodeUrl, setNodeUrl] = useState('http://localhost:8080');
     const [activeTab, setActiveTab] = useState('dashboard');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedBlock, setSelectedBlock] = useState(null);
@@ -206,7 +206,7 @@ const TrinityChainDashboard = () => {
                                         value={nodeUrl}
                                         onChange={(e) => setNodeUrl(e.target.value)}
                                         className="w-full bg-slate-900/50 border border-purple-500/30 rounded px-4 py-2 text-white focus:outline-none focus:border-purple-400"
-                                        placeholder="http://localhost:3000"
+                                         placeholder="http://localhost:8080"
                                     />
                                 </div>
                                 <div>

@@ -49,15 +49,15 @@ const DebugComponent = () => {
       // Get NodeUrl
       const getNodeUrl = () => {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          return 'http://localhost:3000';
+          return 'http://localhost:8080';
         }
         if (window.location.hostname.includes('.github.dev')) {
-          return window.location.origin.replace('-5173.', '-3000.');
+          return window.location.origin.replace('-5173.', '-8080.');
         }
         if (window.location.hostname.includes('render.com') || window.location.hostname.includes('vercel.app')) {
           return window.location.origin;
         }
-        return `${window.location.protocol}//${window.location.hostname}:3000`;
+        return `${window.location.protocol}//${window.location.hostname}:8080`;
       };
 
       const nodeUrl = getNodeUrl();

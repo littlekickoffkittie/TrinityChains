@@ -16,18 +16,18 @@ const TrinityChainDashboard = () => {
   const getNodeUrl = () => {
     // Local development
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:3000';
+      return 'http://localhost:8080';
     }
-    // GitHub Codespaces: replace -5173. with -3000. in the hostname
+    // GitHub Codespaces: replace -5173. with -8080. in the hostname
     if (window.location.hostname.includes('.github.dev')) {
-      return window.location.origin.replace('-5173.', '-3000.');
+      return window.location.origin.replace('-5173.', '-8080.');
     }
     // Production: try to use API on same domain
     if (window.location.hostname.includes('render.com') || window.location.hostname.includes('vercel.app')) {
       return window.location.origin;
     }
     // Fallback
-    return `${window.location.protocol}//${window.location.hostname}:3000`;
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
   };
   const [nodeUrl, setNodeUrl] = useState(getNodeUrl());
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -47,6 +47,23 @@ const TrinityChainDashboard = () => {
       return () => clearInterval(interval);
     }
   }, [nodeUrl, autoRefresh, refreshInterval]);
+
+  useEffect(() => {
+    if (stats && blocks.length > 0) {
+      const recentBlocks = blocks.slice(0, 20).reverse();
+      const networkPerf = recentBlocks.slice(0, 10).map((block, idx) => {
+        const prevBlock = recentBlocks[idx + 1];
+        const blockTime = prevBlock ?
+          (new Date(block.timestamp * 1000) - new Date(prevBlock.timestamp * 1000)) / 1000 : 0;
+        return {
+          block: block.index,
+          blockTime: Math.max(0, blockTime),
+          hashrate: block.difficulty * 1000 / Math.max(blockTime, 0.1)
+        };
+      }).reverse();
+      setNetworkData(networkPerf);
+    }
+  }, [stats, blocks]);
 
   const fetchData = async () => {
     try {
@@ -80,21 +97,6 @@ const TrinityChainDashboard = () => {
       }));
       setChartData(newChartData);
 
-      // Build network performance data
-      if (recentBlocks.length > 1) {
-        const networkPerf = recentBlocks.slice(0, 10).map((block, idx) => {
-          const prevBlock = recentBlocks[idx + 1];
-          const blockTime = prevBlock ?
-            (new Date(block.timestamp) - new Date(prevBlock.timestamp)) / 1000 : 0;
-          return {
-            block: block.index,
-            blockTime: Math.max(0, blockTime),
-            hashrate: block.difficulty * 1000 / Math.max(blockTime, 0.1)
-          };
-        }).reverse();
-        setNetworkData(networkPerf);
-      }
-
       setError(null);
       setLoading(false);
       console.log('[Dashboard] Data fetched successfully');
@@ -124,6 +126,15 @@ const TrinityChainDashboard = () => {
     const hours = Math.floor(mins / 60);
     const remainMins = mins % 60;
     return `${hours}h ${remainMins}m`;
+  };
+
+  const formatDateTime = (timestamp) => {
+    // Check if timestamp is a valid number and represents a valid date
+    const date = new Date(timestamp);
+    if (!timestamp || isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    return date.toLocaleString();
   };
 
   const formatHash = (hash) => {
@@ -236,7 +247,7 @@ const TrinityChainDashboard = () => {
                     value={nodeUrl}
                     onChange={(e) => setNodeUrl(e.target.value)}
                     className="w-full bg-slate-900/50 border border-purple-500/30 rounded px-4 py-2 text-white focus:outline-none focus:border-purple-400"
-                    placeholder="http://localhost:3000"
+                    placeholder="http://localhost:8080"
                   />
                 </div>
                 <div>
@@ -325,14 +336,14 @@ const TrinityChainDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'dashboard' && stats && (
+        {activeTab === 'dashboard' && stats ? (
           <>
             {/* Hero Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <HeroStatCard
                 icon={<Boxes className="text-purple-400" size={28} />}
                 label="Chain Height"
-                value={formatFullNumber(stats.chainHeight || 0)}
+                value={formatFullNumber(stats?.chainHeight || 0)}
                 subtext={`${formatNumber(stats.blocksMined || 0)} mined`}
                 gradient="from-purple-600 to-purple-800"
               />
@@ -496,7 +507,7 @@ const TrinityChainDashboard = () => {
                         </div>
                         <div>
                           <p className="text-sm text-purple-200 font-mono">{formatHash(block.hash)}</p>
-                          <p className="text-xs text-purple-400 mt-1">{new Date(block.timestamp).toLocaleString()}</p>
+                          <p className="text-xs text-purple-400 mt-1">{formatDateTime(block.timestamp * 1000)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
@@ -518,7 +529,7 @@ const TrinityChainDashboard = () => {
               </div>
             </div>
           </>
-        )}
+        ) : null}
 
         {activeTab === 'analytics' && (
           <>
@@ -690,7 +701,7 @@ const TrinityChainDashboard = () => {
                         </div>
                         <div>
                           <p className="text-purple-200 font-mono text-sm mb-1">{formatHash(block.hash)}</p>
-                          <p className="text-purple-400 text-xs">{new Date(block.timestamp).toLocaleString()}</p>
+                          <p className="text-purple-400 text-xs">{formatDateTime(block.timestamp * 1000)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
@@ -726,7 +737,7 @@ const TrinityChainDashboard = () => {
                           </h4>
                           <div className="space-y-3">
                             <DetailRow label="Block Height" value={`#${block.index}`} />
-                            <DetailRow label="Timestamp" value={new Date(block.timestamp).toISOString()} />
+                            <DetailRow label="Timestamp" value={formatDateTime(block.timestamp * 1000)} />
                             <DetailRow label="Difficulty" value={block.difficulty} />
                             <DetailRow label="Nonce" value={block.nonce} />
                             <DetailRow label="Reward" value={`${formatFullNumber(block.reward || 0)} TRC`} />

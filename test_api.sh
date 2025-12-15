@@ -29,9 +29,9 @@ test_endpoint() {
     echo "  Method: $method"
     
     if [ "$method" = "GET" ]; then
-        response=$(curl -s -w "\n%{http_code}" "http://localhost:8000$endpoint")
+        response=$(curl -s -w "\n%{http_code}" "http://localhost:${PORT:-8000}$endpoint")
     else
-        response=$(curl -s -X POST -H "Content-Type: application/json" -w "\n%{http_code}" "http://localhost:8000$endpoint")
+        response=$(curl -s -X POST -H "Content-Type: application/json" -w "\n%{http_code}" "http://localhost:${PORT:-8000}$endpoint")
     fi
     
     http_code=$(echo "$response" | tail -n 1)
@@ -58,13 +58,13 @@ test_endpoint() {
 
 # Test 1: Server connectivity
 echo -e "${BLUE}=== Test 1: Server Connectivity ===${NC}"
-echo "Checking if API server is running on port 8000..."
+echo "Checking if API server is running on port ${PORT:-8000}..."
 
-if nc -z localhost 8000 2>/dev/null; then
-    echo -e "${GREEN}✓ Server is running on port 8000${NC}"
+if nc -z localhost ${PORT:-8000} 2>/dev/null; then
+    echo -e "${GREEN}✓ Server is running on port ${PORT:-8000}${NC}"
     ((TEST_PASSED++))
 else
-    echo -e "${RED}✗ Server is NOT running on port 8000${NC}"
+    echo -e "${RED}✗ Server is NOT running on port ${PORT:-8000}${NC}"
     echo "Start the server with: cargo run --release --bin trinity-api"
     ((TEST_FAILED++))
     exit 1
@@ -98,7 +98,7 @@ test_endpoint "/stats" "API statistics"
 # Test 7: Detailed API Response
 echo -e "${BLUE}=== Test 7: Detailed Blockchain Stats ===${NC}"
 echo "Fetching detailed stats..."
-stats=$(curl -s http://localhost:8000/api/blockchain/stats)
+stats=$(curl -s http://localhost:${PORT:-8000}/api/blockchain/stats)
 echo "Response:"
 echo "$stats" | python3 -m json.tool 2>/dev/null || echo "$stats"
 echo ""
@@ -118,7 +118,7 @@ echo ""
 # Test 9: CORS Headers
 echo -e "${BLUE}=== Test 9: CORS Configuration ===${NC}"
 echo "Checking CORS headers..."
-headers=$(curl -s -i http://localhost:8000/api/blockchain/stats 2>/dev/null | grep -i "access-control")
+headers=$(curl -s -i http://localhost:${PORT:-8000}/api/blockchain/stats 2>/dev/null | grep -i "access-control")
 if [ -z "$headers" ]; then
     echo -e "${YELLOW}⚠ No CORS headers found${NC}"
 else
@@ -130,7 +130,7 @@ echo ""
 # Test 10: API Response Format
 echo -e "${BLUE}=== Test 10: API Response Format ===${NC}"
 echo "Testing blockchain/stats response format..."
-response=$(curl -s http://localhost:8000/api/blockchain/stats)
+response=$(curl -s http://localhost:${PORT:-8000}/api/blockchain/stats)
 if echo "$response" | python3 -m json.tool >/dev/null 2>&1; then
     echo -e "${GREEN}✓ Valid JSON response${NC}"
     ((TEST_PASSED++))
@@ -144,7 +144,7 @@ echo ""
 # Test 11: Create Wallet
 echo -e "${BLUE}=== Test 11: Create Wallet ===${NC}"
 echo "Testing wallet creation..."
-wallet_response=$(curl -s -X POST http://localhost:8000/api/wallet/create)
+wallet_response=$(curl -s -X POST http://localhost:${PORT:-8000}/api/wallet/create)
 if echo "$wallet_response" | python3 -m json.tool >/dev/null 2>&1; then
     echo -e "${GREEN}✓ Wallet creation endpoint working${NC}"
     echo "Response: $wallet_response"
