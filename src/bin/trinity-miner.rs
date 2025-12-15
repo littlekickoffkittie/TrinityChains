@@ -482,6 +482,7 @@ async fn mining_loop(
         let coinbase_tx = Transaction::Coinbase(CoinbaseTx {
             reward_area: trinitychain::geometry::Coord::from_num(1000),
             beneficiary_address: address,
+            nonce: 0,
         });
 
         let mut new_block = Block::new(new_height, last_block.hash(), difficulty, vec![coinbase_tx]);

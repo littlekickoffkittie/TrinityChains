@@ -5,7 +5,7 @@
 
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{self, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{CorsLayer, AllowOrigin};
 use tower_http::services::ServeDir;
 
 use crate::blockchain::{Block, Blockchain, Sha256Hash};
@@ -469,11 +469,16 @@ async fn stats_middleware(State(node): State<Arc<Node>>, req: Request, next: Nex
 
 /// Run the API server with production-grade configuration
 pub async fn run_api_server(node: Arc<Node>) -> Result<(), Box<dyn std::error::Error>> {
-    // CORS configuration
+    // CORS configuration - allow all origins with credentials
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(AllowOrigin::mirror_request()) // Reflect the request's origin
+        .allow_methods(vec![
+            http::Method::GET,
+            http::Method::POST,
+            http::Method::OPTIONS,
+        ]) // Explicitly allow methods
+        .allow_headers(vec![http::header::CONTENT_TYPE]) // Explicitly allow headers
+        .allow_credentials(true);
 
     // API routes
     let api_routes = Router::new()

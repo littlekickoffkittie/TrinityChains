@@ -625,6 +625,7 @@ mod tests {
         Transaction::Coinbase(CoinbaseTx {
             reward_area: Coord::from_num(i),
             beneficiary_address: create_test_address("test"),
+            nonce: 0,
         })
     }
 
@@ -714,6 +715,7 @@ mod tests {
         let tx = Transaction::Coinbase(CoinbaseTx {
             reward_area: Coord::from_num(50.0),
             beneficiary_address: create_test_address("miner2"),
+            nonce: 0,
         });
 
         let block = Block::new(1, last_block.hash(), 1, vec![tx]);
@@ -790,6 +792,7 @@ mod tests {
         let coinbase = Transaction::Coinbase(CoinbaseTx {
             reward_area: Coord::from_num(50.0),
             beneficiary_address: create_test_address("miner1"),
+            nonce: 0,
         });
 
         let block = Block::new(1, last_block.hash(), 1, vec![coinbase, tx1, tx2]);
@@ -808,6 +811,7 @@ mod tests {
         let tx = Transaction::Coinbase(CoinbaseTx {
             reward_area: Coord::from_num(100.0),
             beneficiary_address: address.clone(),
+            nonce: 0,
         });
 
         let result = state.apply_transaction(&tx, 0);

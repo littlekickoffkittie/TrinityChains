@@ -34,6 +34,11 @@ pub trait CacheInner<K, V> {
     /// Get the number of entries in the cache.
     fn len(&self) -> usize;
 
+    /// Check if the cache is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Remove a value from the cache.
     fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
     where
@@ -202,6 +207,12 @@ where
     pub async fn len(&self) -> usize {
         let cache = self.cache.read().await;
         cache.len()
+    }
+
+    /// Check if cache is empty. Uses read lock.
+    pub async fn is_empty(&self) -> bool {
+        let cache = self.cache.read().await;
+        cache.is_empty()
     }
 }
 

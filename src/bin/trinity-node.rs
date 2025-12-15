@@ -43,8 +43,12 @@ impl Default for NodeStats {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
-    let port = config.network.p2p_port;
+    let api_port = config.network.api_port;
+    let p2p_port = config.network.p2p_port;
     let db_path = config.database.path;
+
+    // Set the API port as an environment variable for the API server to use
+    env::set_var("PORT", api_port.to_string());
 
     let args: Vec<String> = env::args().collect();
 
@@ -62,6 +66,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the unified Node
     let node = Arc::new(Node::new(blockchain));
+
+    // Start API server in the background
+    let api_node = node.clone();
+    tokio::spawn(async move {
+        if let Err(e) = trinitychain::api::run_api_server(api_node).await {
+            eprintln!("API Server Error: {}", e);
+        }
+    });
 
     let stats = Arc::new(tokio::sync::Mutex::new(NodeStats {
         ..Default::default()
@@ -92,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start P2P server
     let p2p_node = node.network.clone();
     tokio::spawn(async move {
-        if let Err(e) = p2p_node.start_server(port).await {
+        if let Err(e) = p2p_node.start_server(p2p_port).await {
             eprintln!("❌ Network error: {}", e);
         }
     });

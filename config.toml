@@ -14,6 +14,18 @@ api_port = 3000
 threads = 1
 beneficiary_address = "0000000000000000000000000000000000000000000000000000000000000000"
 
+# AI Validation settings
+[ai_validation]
+# Enable Claude Haiku 4.5 for all clients
+enabled = true
+model = "claude-3-5-haiku-20241022"
+provider = "anthropic"
+# API timeout in seconds
+timeout_secs = 30
+# Enable for transaction validation
+enable_transaction_validation = true
+# Enable for all client requests
+enable_for_all_clients = true
 
 # Database settings
 [database]

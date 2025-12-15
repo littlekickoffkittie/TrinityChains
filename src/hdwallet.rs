@@ -30,7 +30,7 @@ impl HDWallet {
     }
 
     /// Derive the BIP-39 seed bytes from a mnemonic phrase and optional passphrase.
-    /// The returned Vec<u8> is the 64-byte seed produced by PBKDF2 as defined in BIP-39.
+    /// The returned `Vec<u8>` is the 64-byte seed produced by PBKDF2 as defined in BIP-39.
     pub fn seed_from_mnemonic(phrase: &str, passphrase: Option<&str>) -> Result<Vec<u8>, String> {
         let m = Mnemonic::parse_normalized(phrase)
             .map_err(|e| format!("invalid mnemonic phrase: {}", e))?;

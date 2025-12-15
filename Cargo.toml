@@ -55,17 +55,73 @@ thiserror = "1.0"
 clap = { version = "4.5.53", features = ["derive"] }
 
 [[bin]]
+name = "help"
+path = "src/bin/main.rs"
+
+[[bin]]
+
+name = "trinity-addressbook"
+path = "src/bin/trinity-addressbook.rs"
+
+[[bin]]
+name = "trinity-api"
+path = "src/bin/trinity-api.rs"
+
+[[bin]]
+name = "trinity-balance"
+path = "src/bin/trinity-balance.rs"
+
+[[bin]]
+name = "trinity-connect"
+path = "src/bin/trinity-connect.rs"
+
+[[bin]]
 name = "trinity-guestbook"
 path = "src/bin/trinity-guestbook.rs"
+
+[[bin]]
+name = "trinity-history"
+path = "src/bin/trinity-history.rs"
+
+[[bin]]
+name = "trinity-mine-block"
+path = "src/bin/trinity-mine-block.rs"
+
+[[bin]]
+name = "trinity-miner"
+path = "src/bin/trinity-miner.rs"
+
+[[bin]]
+name = "trinity-node"
+path = "src/bin/trinity-node.rs"
+
+[[bin]]
+name = "trinity-send"
+path = "src/bin/trinity-send.rs"
+
+[[bin]]
+name = "trinity-server"
+path = "src/bin/trinity-server.rs"
+
+[[bin]]
+name = "trinity-telegram-bot"
+path = "src/bin/trinity-telegram-bot.rs"
 
 [[bin]]
 name = "trinity-user"
 path = "src/bin/trinity-user.rs"
 
 [[bin]]
+name = "trinity-wallet"
+path = "src/bin/trinity-wallet.rs"
+
+[[bin]]
 name = "trinity-wallet-backup"
 path = "src/bin/trinity-wallet-backup.rs"
 
+[[bin]]
+name = "trinity-wallet-restore"
+path = "src/bin/trinity-wallet-restore.rs"
 
 [dev-dependencies]
 axum-test = "14.1.1"

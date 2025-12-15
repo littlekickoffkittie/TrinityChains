@@ -95,25 +95,52 @@ cargo build --release
 cargo test --lib
 ```
 
+### Run Tests
+
+```bash
+# Run all tests
+cargo test
+
+# Run wallet and transaction tests
+cargo test --test wallet_and_transactions
+
+# Run with output
+cargo test -- --nocapture
+```
+
+**Test Coverage:**
+- Wallet creation and persistence
+- Transaction creation and validation
+- Blockchain initialization
+- Multi-wallet isolation
+- Fee calculations
+- Alice-to-Bob transfer demo
+
 ### Create Wallet
 
 ```bash
 # Generate new wallet
-./target/release/trinity new-wallet
+./target/release/trinity-wallet new
 
-# Output:
-# Mnemonic: abandon ability able about above absent absorb...
-# Address: tc1q3k2x9p7f8h5j6m2n4v8c9w1e3r5t7y9u0i8o6
+# Show wallet address
+./target/release/trinity-wallet address
+
+# List all wallets
+./target/release/trinity-wallet list
+
+# Output example:
+# Address: e54369c2ef44435ba34ef6ee881f33b2fa3126c0bf0e96a806ddc39ab91c046d
+# Created: 2025-12-15T17:03:28.761074746+00:00
 ```
 
 ### Run Node
 
 ```bash
-# Start with default settings from config.toml
+# Start a node with networking
 ./target/release/trinity-node
 
 # To connect to a peer
-./target/release/trinity-node --peer <host:port>
+./target/release/trinity-connect <peer_address:port>
 ```
 
 ### Mining
@@ -129,10 +156,11 @@ cargo test --lib
 ### Send Transaction
 
 ```bash
-./target/release/trinity-send \
-  tc1qRECIPIENT_ADDRESS \
-  <triangle_hash> \
-  "optional memo"
+# Send transaction to an address
+./target/release/trinity-send <to_address> <amount> --from <wallet_name>
+
+# Example:
+./target/release/trinity-send 9448bf87d9a554a672ad99acef2a811b4f27f20568ea3d55c413b3ec4b0624d3 50 --from alice "Payment memo"
 ```
 
 ---
@@ -198,19 +226,22 @@ src/
 ### HTTP Endpoints
 
 ```
-GET  /api/blockchain/stats              # Chain metrics
+GET  /api/blockchain/height             # Current block height
 GET  /api/blockchain/blocks             # Recent blocks
-GET  /api/blockchain/block/:hash        # Block details
-GET  /api/address/:addr/balance         # Address balance + triangles
-GET  /api/address/:addr/triangles       # Triangle coordinates
+GET  /api/blockchain/block/:height      # Block details by height
+GET  /api/blockchain/stats              # Chain metrics
+GET  /api/address/:addr/balance         # Address balance
+GET  /api/address/:addr/transactions    # Address transaction history
 POST /api/transaction                   # Submit signed transaction
+GET  /api/transaction/:hash             # Transaction details
+GET  /api/mempool                       # Pending transactions
 POST /api/mining/start                  # Begin mining
 POST /api/mining/stop                   # Halt mining
-GET  /api/mining/status                 # Hashrate, block count
+GET  /api/mining/status                 # Mining status
 GET  /api/network/peers                 # Connected peers
-
-WebSocket
-WS   /ws/p2p                            # P2P message bridge
+GET  /api/network/info                  # Network information
+POST /api/wallet/create                 # Create new wallet
+GET  /api/health                        # Health check
 ```
 
 ### Example Usage
@@ -220,34 +251,29 @@ WS   /ws/p2p                            # P2P message bridge
 curl http://localhost:3000/api/blockchain/stats | jq
 
 # Query address balance
-curl http://localhost:3000/api/address/tc1qYOUR_ADDRESS/balance
+curl http://localhost:3000/api/address/e54369c2ef44435ba34ef6ee881f33b2fa3126c0/balance
 
-# Submit transaction (from wallet CLI)
-curl -X POST http://localhost:3000/api/transaction \
-  -H "Content-Type: application/json" \
-  -d @transaction.json
+# Check mining status
+curl http://localhost:3000/api/mining/status | jq
 ```
 
 ---
 
 ## Dashboard
 
-React-based monitoring interface with live WebSocket updates:
+Web-based monitoring interface with real-time updates:
 
 ```bash
-cd dashboard
-npm install
-npm run build
+# Access at http://localhost:3000
+# The dashboard is served alongside the API server
+./target/release/trinity-api
 ```
 
-Access at `http://localhost:3000/dashboard`
-
 **Features:**
-- Real-time blockchain stats (height, difficulty, circulating supply)
+- Real-time blockchain stats (height, difficulty, transaction count)
 - Block explorer with transaction details
-- Mining control panel (start/stop, hashrate monitor)
+- Mining control panel
 - Network peer visualization
-- Halving countdown
 
 ---
 
@@ -262,6 +288,25 @@ Access at `http://localhost:3000/dashboard`
 | Current Difficulty | Dynamic (10-block avg) |
 
 Supply curve follows geometric decay with periodic halvings.
+
+---
+
+## Command Line Tools
+
+| Binary | Purpose |
+|--------|---------|
+| `trinity-wallet` | Wallet creation and management |
+| `trinity-send` | Send transactions between addresses |
+| `trinity-balance` | Check address balance |
+| `trinity-node` | Run a blockchain node |
+| `trinity-miner` | Persistent background miner |
+| `trinity-mine-block` | Mine a single block |
+| `trinity-api` | Start REST API server |
+| `trinity-server` | Start API server with P2P networking |
+| `trinity-history` | View transaction history |
+| `trinity-connect` | Connect to peer nodes |
+| `trinity-addressbook` | Manage address book |
+| `trinity-user` | Manage user profiles |
 
 ---
 
@@ -329,6 +374,25 @@ Look for issues tagged `good first issue` or propose your own improvements.
 - Document public APIs with rustdoc comments
 - Follow existing module structure
 
+### Testing
+
+We use integration tests to verify wallet and transaction functionality:
+
+```bash
+# Run the wallet and transaction test suite
+cargo test --test wallet_and_transactions --verbose
+
+# Expected output: 10 tests covering:
+# ✓ Wallet creation
+# ✓ Two-wallet scenarios (Alice & Bob)
+# ✓ Wallet persistence (save/load)
+# ✓ Keypair derivation
+# ✓ Blockchain initialization
+# ✓ Transfer transactions
+# ✓ Multi-wallet isolation
+# ✓ Fee calculations
+```
+
 ---
 
 ## Project Structure
@@ -341,6 +405,8 @@ Look for issues tagged `good first issue` or propose your own improvements.
 ├── documentation/    # Architecture docs
 ├── scripts/          # Build and deployment scripts
 ├── src/              # Rust blockchain implementation
+├── tests/            # Integration tests
+│   └── wallet_and_transactions.rs  # Wallet & transaction tests
 ├── Cargo.toml
 ├── LICENSE
 └── README.md
