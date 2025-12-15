@@ -346,7 +346,7 @@ impl SecurityManager {
         let signature = self.node_keypair.sign(challenge.nonce.as_bytes())?;
 
         Ok(PeerAuthResponse {
-            signature: hex::encode(&signature),
+            signature: hex::encode(signature),
             public_key: hex::encode(self.node_keypair.public_key_bytes()),
             timestamp: current_timestamp(),
             version: "1.0".to_string(),

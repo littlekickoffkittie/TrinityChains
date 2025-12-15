@@ -1,7 +1,5 @@
-//! Core geometric primitives and triangle logic for TrinityChain.
-//! Defines the Point and Triangle structs, subdivision logic, and validation.
-
 use crate::blockchain::Sha256Hash;
+use crate::crypto::Address;
 use fixed::types::I32F32;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -73,7 +71,7 @@ pub struct Triangle {
     pub b: Point,
     pub c: Point,
     pub parent_hash: Option<Sha256Hash>,
-    pub owner: String,
+    pub owner: Address,
     /// Effective value of this triangle.
     #[serde(default)]
     pub value: Option<Coord>,
@@ -86,7 +84,7 @@ impl Triangle {
         b: Point,
         c: Point,
         parent_hash: Option<Sha256Hash>,
-        owner: String,
+        owner: Address,
     ) -> Self {
         Triangle {
             a,
@@ -104,7 +102,7 @@ impl Triangle {
         b: Point,
         c: Point,
         parent_hash: Option<Sha256Hash>,
-        owner: String,
+        owner: Address,
         value: Coord,
     ) -> Self {
         Triangle {
@@ -123,7 +121,7 @@ impl Triangle {
     }
 
     /// Creates a new triangle with a different owner.
-    pub fn change_owner(&self, new_owner: String) -> Self {
+    pub fn change_owner(&self, new_owner: Address) -> Self {
         let mut new_triangle = self.clone();
         new_triangle.owner = new_owner;
         new_triangle
@@ -168,7 +166,7 @@ impl Triangle {
         }
 
         // Include owner and value in the hash for uniqueness
-        hasher.update(self.owner.as_bytes());
+        hasher.update(self.owner);
         if let Some(value) = self.value {
             hasher.update(value.to_le_bytes());
         }
@@ -191,7 +189,7 @@ impl Triangle {
             Point::new(Coord::from_num(1.7320508), Coord::from_num(0)),
             Point::new(Coord::from_num(0.8660254), Coord::from_num(1.5)),
             None,
-            "genesis_owner".to_string(),
+            [0; 32],
         )
     }
 
@@ -221,7 +219,7 @@ impl Triangle {
             mid_ab,
             mid_ca,
             parent_hash,
-            self.owner.clone(),
+            self.owner,
             child_value,
         );
         let t2 = Triangle::new_with_value(
@@ -229,7 +227,7 @@ impl Triangle {
             self.b,
             mid_bc,
             parent_hash,
-            self.owner.clone(),
+            self.owner,
             child_value,
         );
         let t3 = Triangle::new_with_value(
@@ -237,7 +235,7 @@ impl Triangle {
             mid_bc,
             self.c,
             parent_hash,
-            self.owner.clone(),
+            self.owner,
             child_value,
         );
 
@@ -265,13 +263,20 @@ impl Triangle {
 mod tests {
     use super::*;
 
+    fn create_test_address(s: &str) -> Address {
+        let mut address = [0u8; 32];
+        let bytes = s.as_bytes();
+        address[..bytes.len()].copy_from_slice(bytes);
+        address
+    }
+
     fn setup_test_triangle() -> Triangle {
         Triangle::new(
             Point::new(Coord::from_num(0), Coord::from_num(0)),
             Point::new(Coord::from_num(10), Coord::from_num(0)),
             Point::new(Coord::from_num(0), Coord::from_num(10)),
             None,
-            "test_owner".to_string(),
+            create_test_address("test_owner"),
         )
     }
 
@@ -295,8 +300,8 @@ mod tests {
         let p2 = Point::new(Coord::from_num(3), Coord::from_num(4));
         let p3 = Point::new(Coord::from_num(5), Coord::from_num(6));
 
-        let t1 = Triangle::new(p1, p2, p3, None, "owner1".to_string());
-        let t2 = Triangle::new(p3, p1, p2, None, "owner1".to_string());
+        let t1 = Triangle::new(p1, p2, p3, None, create_test_address("owner1"));
+        let t2 = Triangle::new(p3, p1, p2, None, create_test_address("owner1"));
 
         assert_eq!(t1.hash(), t2.hash());
     }
@@ -307,8 +312,8 @@ mod tests {
         let p2 = Point::new(Coord::from_num(3), Coord::from_num(4));
         let p3 = Point::new(Coord::from_num(5), Coord::from_num(6));
 
-        let t1 = Triangle::new(p1, p2, p3, None, "owner1".to_string());
-        let t2 = Triangle::new(p1, p2, p3, None, "owner2".to_string());
+        let t1 = Triangle::new(p1, p2, p3, None, create_test_address("owner1"));
+        let t2 = Triangle::new(p1, p2, p3, None, create_test_address("owner2"));
 
         assert_ne!(t1.hash(), t2.hash());
     }
@@ -353,7 +358,7 @@ mod tests {
             Point::new(Coord::from_num(2), Coord::from_num(2)),
             Point::new(Coord::from_num(3), Coord::from_num(3)),
             None,
-            "owner".to_string(),
+            create_test_address("owner"),
         );
         assert!(!t_degenerate.is_valid());
     }

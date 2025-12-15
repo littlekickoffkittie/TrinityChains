@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db = Database::open(&db_path).expect("Failed to open database");
     let blockchain = db.load_blockchain().unwrap_or_else(|_| {
-        Blockchain::new("".to_string(), 1).expect("Failed to create new blockchain")
+        Blockchain::new([0; 32], 1).expect("Failed to create new blockchain")
     });
 
     // Create the unified Node

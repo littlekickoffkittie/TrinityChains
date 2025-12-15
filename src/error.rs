@@ -1,86 +1,66 @@
 //! Error types for TrinityChain
 
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
-use serde_json::json;
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Error, Debug)]
+#[derive(Debug, Clone)]
 pub enum ChainError {
-    #[error("Invalid block linkage")]
     InvalidBlockLinkage,
-    #[error("Network error: {0}")]
     NetworkError(String),
-    #[error("Database error: {0}")]
     DatabaseError(String),
-    #[error("Invalid proof of work")]
     InvalidProofOfWork,
-    #[error("Invalid Merkle root")]
     InvalidMerkleRoot,
-    #[error("Invalid transaction: {0}")]
     InvalidTransaction(String),
-    #[error("Triangle not found: {0}")]
     TriangleNotFound(String),
-    #[error("Cryptographic error: {0}")]
     CryptoError(String),
-    #[error("Wallet error: {0}")]
     WalletError(String),
-    #[error("Orphan block")]
     OrphanBlock,
-    #[error("API error: {0}")]
     ApiError(String),
-    #[error("Authentication error: {0}")]
     AuthenticationError(String),
-    #[error("Mempool is full")]
     MempoolFull,
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("Bincode error: {0}")]
-    BincodeError(#[from] Box<bincode::ErrorKind>),
-    #[error("Fork not found")]
+    IoError(String),
+    BincodeError(String),
     ForkNotFound,
-    #[error("Invalid block: {0}")]
     InvalidBlock(String),
-    #[error("Internal error: {0}")]
-    InternalError(String),
+    DoubleSpendDetected(String),
+    BlockAlreadyExists,
 }
 
-#[derive(Error, Debug)]
-pub enum ApiError {
-    #[error("Internal server error")]
-    InternalServerError,
-    #[error("Not found: {0}")]
-    NotFound(String),
-    #[error("Bad request: {0}")]
-    BadRequest(String),
-}
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            ApiError::InternalServerError => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            ),
-            ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message),
-            ApiError::BadRequest(message) => (StatusCode::BAD_REQUEST, message),
-        };
-
-        let body = Json(json!({ "error": error_message }));
-
-        (status, body).into_response()
+impl fmt::Display for ChainError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ChainError::InvalidBlockLinkage => write!(f, "Invalid block linkage"),
+            ChainError::InvalidProofOfWork => write!(f, "Invalid proof of work"),
+            ChainError::InvalidMerkleRoot => write!(f, "Invalid Merkle root"),
+            ChainError::InvalidTransaction(msg) => write!(f, "Invalid transaction: {}", msg),
+            ChainError::TriangleNotFound(msg) => write!(f, "Triangle not found: {}", msg),
+            ChainError::CryptoError(msg) => write!(f, "Cryptographic error: {}", msg),
+            ChainError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            ChainError::NetworkError(msg) => write!(f, "Network error: {}", msg),
+            ChainError::WalletError(msg) => write!(f, "Wallet error: {}", msg),
+            ChainError::OrphanBlock => write!(f, "Orphan block"),
+            ChainError::ApiError(msg) => write!(f, "API error: {}", msg),
+            ChainError::AuthenticationError(msg) => write!(f, "Authentication error: {}", msg),
+            ChainError::MempoolFull => write!(f, "Mempool is full"),
+            ChainError::IoError(msg) => write!(f, "IO error: {}", msg),
+            ChainError::BincodeError(msg) => write!(f, "Bincode error: {}", msg),
+            ChainError::ForkNotFound => write!(f, "Fork not found"),
+            ChainError::InvalidBlock(msg) => write!(f, "Invalid block: {}", msg),
+            ChainError::DoubleSpendDetected(msg) => write!(f, "Double spend detected: {}", msg),
+            ChainError::BlockAlreadyExists => write!(f, "Block already exists"),
+        }
     }
 }
 
-impl From<ChainError> for ApiError {
-    fn from(err: ChainError) -> Self {
-        match err {
-            ChainError::TriangleNotFound(msg) => ApiError::NotFound(msg),
-            ChainError::InvalidTransaction(msg) => ApiError::BadRequest(msg),
-            _ => ApiError::InternalServerError,
-        }
+impl std::error::Error for ChainError {}
+
+impl From<std::io::Error> for ChainError {
+    fn from(err: std::io::Error) -> Self {
+        ChainError::IoError(err.to_string())
+    }
+}
+
+impl From<Box<bincode::ErrorKind>> for ChainError {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
+        ChainError::BincodeError(err.to_string())
     }
 }

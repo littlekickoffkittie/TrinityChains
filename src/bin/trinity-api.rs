@@ -16,7 +16,7 @@ async fn main() -> Result<(), ChainError> {
 
     // Create new blockchain (or load from persistence if you have that method)
     // For now, just create a new one
-    let blockchain = Blockchain::new("miner_address".to_string(), 1).unwrap();
+    let blockchain = Blockchain::new([0; 32], 1).unwrap();
     println!("✅ Initialized blockchain");
 
     // Create node

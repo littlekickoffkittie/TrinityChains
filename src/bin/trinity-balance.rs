@@ -4,6 +4,7 @@ use colored::*;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::Color as TableColor;
 use comfy_table::{Attribute, Cell, ContentArrangement, Table};
+use trinitychain::crypto::address_from_hex;
 use trinitychain::persistence::Database;
 
 const LOGO: &str = r#"
@@ -60,6 +61,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .to_string()
     };
 
+    let my_address_bytes = address_from_hex(&my_address)?;
+
     let db =
         Database::open("trinitychain.db").map_err(|e| format!("Failed to open database: {}", e))?;
     let chain = db
@@ -108,11 +111,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Filter triangles owned by this address
     for (hash, triangle) in &chain.state.utxo_set {
-        if triangle.owner == my_address {
+        if triangle.owner == my_address_bytes {
             my_triangles += 1;
-            total_area += triangle.area();
+            total_area += triangle.effective_value();
             let hash_hex = hex::encode(hash);
-            triangle_list.push((hash_hex, triangle.area()));
+            triangle_list.push((hash_hex, triangle.effective_value()));
         }
     }
 

@@ -1,12 +1,21 @@
-# TrinityChain Configuration
+# Default configuration for TrinityChain node
 
+# Network settings
 [network]
-p2p_port = 8333
+# The port this node will listen on for P2P connections
+p2p_port = 8000
+# List of trusted bootstrap nodes to connect to initially
+bootstrap_nodes = ["127.0.0.1:8000"]
+# The port the REST and WebSocket API server will listen on
 api_port = 3000
 
-[database]
-path = "trinitychain.db"
-
+# Miner settings
 [miner]
 threads = 1
-beneficiary_address = "trinity-default-miner-address" # Replace with a valid address
+beneficiary_address = "0000000000000000000000000000000000000000000000000000000000000000"
+
+
+# Database settings
+[database]
+# Path to the SQLite database file
+path = "trinity.db"

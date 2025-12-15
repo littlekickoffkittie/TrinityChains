@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use colored::*;
 use std::collections::HashSet;
 use trinitychain::cli::load_blockchain_from_config;
+use trinitychain::crypto::{address_from_hex, address_from_string, address_to_hex};
 use trinitychain::geometry::Coord;
 use trinitychain::transaction::{Transaction, TransferTx};
 use trinitychain::wallet;
@@ -63,6 +64,8 @@ async fn sign(message: &str, wallet_name: Option<&str>) -> Result<(), Box<dyn st
 
     println!("Signing with wallet: {}", from_wallet.bright_yellow());
 
+    let from_address_bytes = address_from_hex(&from_address)?;
+
     let (_config, mut chain) = load_blockchain_from_config()?;
 
     let mut locked_triangles = HashSet::new();
@@ -81,14 +84,14 @@ async fn sign(message: &str, wallet_name: Option<&str>) -> Result<(), Box<dyn st
         .utxo_set
         .iter()
         .find(|(hash, triangle)| {
-            triangle.owner == from_address && !locked_triangles.contains(*hash)
+            triangle.owner == from_address_bytes && !locked_triangles.contains(*hash) && triangle.effective_value() >= Coord::from_num(0.0001)
         })
         .ok_or("No UTXOs available to pay for the guestbook signing fee.")?;
 
     let mut tx = TransferTx::new(
         *input_hash,
-        GUESTBOOK_ADDRESS.to_string(),
-        from_address,
+        address_from_string(GUESTBOOK_ADDRESS),
+        from_address_bytes,
         Coord::from_num(0),      // No value transferred to the guestbook address
         Coord::from_num(0.0001), // A small fee to get the transaction mined
         chain.blocks.len() as u64,
@@ -98,7 +101,7 @@ async fn sign(message: &str, wallet_name: Option<&str>) -> Result<(), Box<dyn st
     let message_to_sign = tx.signable_message();
     let signature = keypair.sign(&message_to_sign)?;
     let public_key = keypair.public_key.serialize().to_vec();
-    tx.sign(signature, public_key);
+    tx.sign(signature.to_vec(), public_key.to_vec());
 
     let transaction = Transaction::Transfer(tx);
     chain.mempool.add_transaction(transaction.clone())?;
@@ -122,13 +125,13 @@ fn view() -> Result<(), Box<dyn std::error::Error>> {
     for block in &chain.blocks {
         for tx in &block.transactions {
             if let Transaction::Transfer(transfer_tx) = tx {
-                if transfer_tx.new_owner == GUESTBOOK_ADDRESS {
+                if transfer_tx.new_owner == address_from_string(GUESTBOOK_ADDRESS) {
                     if let Some(memo) = &transfer_tx.memo {
                         entries_found = true;
                         println!(
                             "{} from {}: {}",
                             "•".bright_yellow(),
-                            transfer_tx.sender.bright_green(),
+                            address_to_hex(&transfer_tx.sender).bright_green(),
                             memo
                         );
                     }

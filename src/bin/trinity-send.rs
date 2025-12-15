@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use trinitychain::cli::load_blockchain_from_config;
+use trinitychain::crypto::address_from_hex;
 use trinitychain::geometry::Coord;
 use trinitychain::network::NetworkNode;
 use trinitychain::transaction::{Transaction, TransferTx};
@@ -88,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", LOGO.bright_cyan());
 
     let to_address = &args[1];
+    let to_address_bytes = address_from_hex(to_address)?;
     let amount: f64 = args[2].parse()?;
     let amount_coord = Coord::from_num(amount);
 
@@ -139,6 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let from_address = from_wallet.address.clone();
+    let from_address_bytes = address_from_hex(&from_address)?;
     let keypair = from_wallet.get_keypair()?;
 
     pb.set_message("Loading blockchain...");
@@ -180,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .utxo_set
         .iter()
         .find(|(hash, triangle)| {
-            triangle.owner == from_address
+            triangle.owner == from_address_bytes
                 && triangle.effective_value() >= amount_coord
                 && !locked_triangles.contains(*hash)
         })
@@ -252,8 +255,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fee = Coord::from_num(0);
     let mut tx = TransferTx::new(
         *input_hash,
-        to_address.to_string(),
-        from_address.clone(),
+        to_address_bytes,
+        from_address_bytes,
         amount_coord,
         fee,
         chain.blocks.len() as u64,
@@ -268,7 +271,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let message = tx.signable_message();
     let signature = keypair.sign(&message)?;
     let public_key = keypair.public_key.serialize().to_vec();
-    tx.sign(signature, public_key);
+    tx.sign(signature.to_vec(), public_key.to_vec());
 
     let transaction = Transaction::Transfer(tx);
     chain.mempool.add_transaction(transaction.clone())?;

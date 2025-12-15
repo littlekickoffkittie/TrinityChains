@@ -36,6 +36,7 @@ TrinityChain implements a proof-of-work blockchain where every UTXO is a triangl
 ```
 
 **Current Status:** Functional implementation with test coverage, CLI tools, REST API, and web dashboard.
+This project is actively maintained.
 
 ---
 

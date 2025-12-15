@@ -5,7 +5,8 @@ use crate::error::ChainError;
 use crate::geometry::{Coord, Point, Triangle, GEOMETRIC_TOLERANCE};
 use crate::mempool::Mempool;
 use crate::miner::mine_block;
-use crate::transaction::{Address, CoinbaseTx, Transaction, TransferTx};
+use crate::crypto::Address;
+use crate::transaction::{CoinbaseTx, Transaction, TransferTx};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
@@ -145,7 +146,7 @@ impl TriangleState {
         for triangle in self.utxo_set.values() {
             *self
                 .address_balances
-                .entry(triangle.owner.clone())
+                .entry(triangle.owner)
                 .or_insert(Coord::from_num(0)) += triangle.effective_value();
         }
     }
@@ -178,7 +179,7 @@ impl TriangleState {
                     Point::new(Coord::from_num(0.0), Coord::from_num(0.0)),
                     Point::new(Coord::from_num(0.0), Coord::from_num(0.0)),
                     None,
-                    tx.beneficiary_address.clone(),
+                    tx.beneficiary_address,
                 )
                 .with_effective_value(tx.reward_area);
 
@@ -189,7 +190,7 @@ impl TriangleState {
                 // c) Update the balance for the beneficiary address.
                 *self
                     .address_balances
-                    .entry(tx.beneficiary_address.clone())
+                    .entry(tx.beneficiary_address)
                     .or_insert(Coord::from_num(0)) += tx.reward_area;
             }
 
@@ -213,7 +214,7 @@ impl TriangleState {
                     self.utxo_set.insert(input_hash, consumed_triangle.clone());
                     return Err(ChainError::InvalidTransaction(format!(
                         "Sender {} does not own input UTXO (owned by {})",
-                        tx.sender, consumed_triangle.owner
+                        hex::encode(tx.sender), hex::encode(consumed_triangle.owner)
                     )));
                 }
 
@@ -225,7 +226,7 @@ impl TriangleState {
                 // The change amount will be added back later if applicable.
                 let sender_balance = self
                     .address_balances
-                    .entry(tx.sender.clone())
+                    .entry(tx.sender)
                     .or_insert(Coord::from_num(0));
                 *sender_balance -= input_value;
                 if *sender_balance < Coord::from_num(0) {
@@ -235,7 +236,7 @@ impl TriangleState {
                 // d) Create the new UTXO for the recipient.
                 let new_owner_triangle = consumed_triangle
                     .clone()
-                    .change_owner(tx.new_owner.clone())
+                    .change_owner(tx.new_owner)
                     .with_effective_value(tx.amount); // The value is the amount being transferred.
 
                 let tx_hash = Transaction::Transfer(tx.clone()).hash();
@@ -244,7 +245,7 @@ impl TriangleState {
                 // e) Update the recipient's balance.
                 *self
                     .address_balances
-                    .entry(tx.new_owner.clone())
+                    .entry(tx.new_owner)
                     .or_insert(Coord::from_num(0)) += tx.amount;
 
                 // f) Handle the change. If there's remaining value, create a new UTXO for the sender.
@@ -252,8 +253,8 @@ impl TriangleState {
                     // Create a pseudo-transaction for the change to get a unique hash.
                     let change_tx = Transaction::Transfer(TransferTx {
                         input_hash: tx_hash, // The "input" for the change is the hash of the main transfer output.
-                        new_owner: tx.sender.clone(),
-                        sender: tx.sender.clone(),
+                        new_owner: tx.sender,
+                        sender: tx.sender,
                         amount: remaining_value,
                         fee_area: Coord::from_num(0), // No fee on change.
                         nonce: tx.nonce + 1,          // Different nonce to ensure different hash.
@@ -264,7 +265,7 @@ impl TriangleState {
 
                     let change_hash = change_tx.hash();
                     let change_triangle = consumed_triangle
-                        .change_owner(tx.sender.clone())
+                        .change_owner(tx.sender)
                         .with_effective_value(remaining_value);
 
                     self.utxo_set.insert(change_hash, change_triangle);
@@ -272,7 +273,7 @@ impl TriangleState {
                     // Add the change value back to the sender's balance.
                     *self
                         .address_balances
-                        .entry(tx.sender.clone())
+                        .entry(tx.sender)
                         .or_insert(Coord::from_num(0)) += remaining_value;
                 }
             }
@@ -294,7 +295,7 @@ impl TriangleState {
                     self.utxo_set.insert(input_hash, consumed_triangle.clone()); // Revert state change.
                     return Err(ChainError::InvalidTransaction(format!(
                         "Subdivision owner {} does not match parent triangle owner {}",
-                        tx.owner_address, consumed_triangle.owner
+                        hex::encode(tx.owner_address), hex::encode(consumed_triangle.owner)
                     )));
                 }
 
@@ -302,7 +303,7 @@ impl TriangleState {
                 let parent_value = consumed_triangle.effective_value();
                 let owner_balance = self
                     .address_balances
-                    .entry(tx.owner_address.clone())
+                    .entry(tx.owner_address)
                     .or_insert(Coord::from_num(0));
                 *owner_balance -= parent_value;
                 if *owner_balance < Coord::from_num(0) {
@@ -319,7 +320,7 @@ impl TriangleState {
                     self.utxo_set.insert(input_hash, consumed_triangle);
                     *self
                         .address_balances
-                        .entry(tx.owner_address.clone())
+                        .entry(tx.owner_address)
                         .or_insert(Coord::from_num(0)) += parent_value;
                     return Err(ChainError::InvalidTransaction(format!(
                         "Value mismatch in subdivision: parent ({}) - fee ({}) != children total ({}).",
@@ -332,7 +333,7 @@ impl TriangleState {
                     self.utxo_set.insert(child.hash(), child.clone());
                     *self
                         .address_balances
-                        .entry(tx.owner_address.clone())
+                        .entry(tx.owner_address)
                         .or_insert(Coord::from_num(0)) += child.effective_value();
                 }
             }
@@ -394,6 +395,7 @@ impl Blockchain {
         let coinbase_tx = Transaction::Coinbase(CoinbaseTx {
             reward_area: Coord::from_num(1_000_000.0), // Initial fixed supply
             beneficiary_address: miner_address,
+            nonce: 0,
         });
 
         let transactions = vec![coinbase_tx];
@@ -609,7 +611,10 @@ mod tests {
     use crate::geometry::{Coord, Point};
     use crate::transaction::{SubdivisionTx, TransferTx};
     fn create_test_address(id: &str) -> Address {
-        id.to_string()
+        let mut address = [0u8; 32];
+        let bytes = id.as_bytes();
+        address[..bytes.len()].copy_from_slice(bytes);
+        address
     }
 
     fn create_test_blockchain() -> Blockchain {

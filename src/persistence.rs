@@ -266,7 +266,7 @@ impl Database {
         }
 
         if blocks.is_empty() {
-            return Blockchain::new("".to_string(), 0);
+            return Blockchain::new([0; 32], 0);
         }
 
         let mut utxo_set = HashMap::new();
@@ -350,6 +350,14 @@ impl Database {
 mod tests {
     use super::*;
     use crate::blockchain::Blockchain;
+    use crate::crypto::Address;
+
+    fn create_test_address(s: &str) -> Address {
+        let mut address = [0u8; 32];
+        let bytes = s.as_bytes();
+        address[..bytes.len()].copy_from_slice(bytes);
+        address
+    }
 
     #[test]
     fn test_database_open() {
@@ -360,11 +368,10 @@ mod tests {
     #[test]
     fn test_save_and_load_blockchain() {
         let db = Database::open(":memory:").unwrap();
-        let chain = Blockchain::new("miner".to_string(), 1).unwrap();
+        let chain = Blockchain::new(create_test_address("miner"), 1).unwrap();
 
-        db.save_block(&chain.blocks[0]).unwrap();
-        db.save_utxo_set(&chain.state).unwrap();
-        db.save_difficulty(chain.difficulty as u64).unwrap();
+        db.save_blockchain_state(&chain.blocks[0], &chain.state, chain.difficulty as u64)
+            .unwrap();
 
         let loaded_chain = db.load_blockchain().unwrap();
 

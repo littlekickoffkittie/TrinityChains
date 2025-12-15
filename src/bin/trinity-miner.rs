@@ -13,14 +13,13 @@ use ratatui::{
     widgets::{Block as TuiBlock, Borders, Gauge, Paragraph, Sparkline},
     Terminal,
 };
+use std::env;
 use std::io;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
 use trinitychain::blockchain::{Block, Blockchain};
-use trinitychain::config::{load_config, Config};
-use trinitychain::miner::{mine_block, mine_block_parallel};
 use trinitychain::network::NetworkNode;
 use trinitychain::persistence::Database;
 use trinitychain::transaction::{CoinbaseTx, Transaction};
@@ -31,10 +30,8 @@ struct MiningStats {
     chain_height: u64,
     uptime_secs: u64,
     avg_block_time: f64,
-    difficulty: u32,
-    current_reward: f64,
+    difficulty: u64,
     total_earned: f64,
-    current_supply: f64,
     max_supply: u64,
     blocks_to_halving: u64,
     halving_era: u64,
@@ -55,9 +52,7 @@ impl Default for MiningStats {
             uptime_secs: 0,
             avg_block_time: 0.0,
             difficulty: 1,
-            current_reward: 1000.0,
             total_earned: 0.0,
-            current_supply: 0.0,
             max_supply: 420_000_000,
             blocks_to_halving: 210_000,
             halving_era: 0,
@@ -223,7 +218,7 @@ fn draw_ui(f: &mut ratatui::Frame, stats: &MiningStats, beneficiary: &str) {
             Span::styled("  │  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Reward: ", Style::default().fg(Color::Gray)),
             Span::styled(
-                format!("{}", stats.current_reward),
+                format!("{} TRC", 1000 / (1 << stats.halving_era)),
                 Style::default()
                     .fg(Color::Green)
                     .add_modifier(Modifier::BOLD),
@@ -247,7 +242,6 @@ fn draw_ui(f: &mut ratatui::Frame, stats: &MiningStats, beneficiary: &str) {
     f.render_widget(stats_widget, chunks[2]);
 
     // Supply Progress
-    let supply_pct = (stats.current_supply / stats.max_supply as f64) * 100.0;
     let gauge = Gauge::default()
         .block(
             TuiBlock::default()
@@ -256,12 +250,10 @@ fn draw_ui(f: &mut ratatui::Frame, stats: &MiningStats, beneficiary: &str) {
                 .border_style(Style::default().fg(Color::Magenta)),
         )
         .gauge_style(Style::default().fg(Color::Magenta).bg(Color::Black))
-        .percent(supply_pct.min(100.0) as u16)
         .label(format!(
-            "{} / {} ({:.3}%)",
-            format_number(stats.current_supply as u64),
-            format_number(stats.max_supply),
-            supply_pct
+            "{} / {}",
+            format_number(stats.chain_height * 1000),
+            format_number(stats.max_supply)
         ));
     f.render_widget(gauge, chunks[3]);
 
@@ -372,10 +364,27 @@ fn draw_ui(f: &mut ratatui::Frame, stats: &MiningStats, beneficiary: &str) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
-    let config = Arc::new(load_config()?);
-    let beneficiary_address = config.miner.beneficiary_address.clone();
-    let threads = config.miner.threads;
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Usage: trinity-miner <beneficiary_address> [--threads <N>]");
+        return Ok(());
+    }
+    let beneficiary_address = args[1].clone();
+
+    let mut threads: usize = 1;
+    let mut i = 1;
+    while i < args.len() {
+        if args[i] == "--threads" || args[i] == "-t" {
+            if i + 1 < args.len() {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    threads = n.max(1);
+                }
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
 
     // Setup terminal
     enable_raw_mode()?;
@@ -389,17 +398,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let beneficiary_clone = beneficiary_address.clone();
 
     // Create and start network node
-    let db_for_network = Database::open(&config.database.path).expect("Failed to open database");
-    let chain_for_network = db_for_network.load_blockchain().unwrap_or_else(|_| {
-        Blockchain::new("".to_string(), 1).expect("Failed to create new blockchain")
-    });
+    let db_for_network = Database::open("trinitychain.db").expect("Failed to open database");
+    let chain_for_network = db_for_network
+        .load_blockchain()
+        .unwrap_or_else(|_| Blockchain::new([0; 32], 1).unwrap());
     let network = Arc::new(NetworkNode::new(Arc::new(RwLock::new(chain_for_network))));
     let network_clone = network.clone();
-    let config_clone = Arc::clone(&config);
 
     // Start network server in background
     tokio::spawn(async move {
-        let port = config_clone.network.p2p_port;
+        let port = 8333; // Default P2P port
         println!("🌐 Starting P2P network on port {}...", port);
         if let Err(e) = network_clone.start_server(port).await {
             eprintln!("❌ Network error: {}", e);
@@ -408,14 +416,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn mining task
     let mining_handle = tokio::spawn(async move {
-        mining_loop(
-            beneficiary_clone,
-            threads,
-            stats_clone,
-            Some(network),
-            config,
-        )
-        .await;
+        mining_loop(beneficiary_clone, threads, stats_clone, Some(network)).await;
     });
 
     // UI loop
@@ -455,12 +456,9 @@ async fn mining_loop(
     _threads: usize,
     stats: Arc<Mutex<MiningStats>>,
     network: Option<Arc<NetworkNode>>,
-    config: Arc<Config>,
 ) {
-    let db = Database::open(&config.database.path).expect("Failed to open database");
-    let mut chain = db.load_blockchain().unwrap_or_else(|_| {
-        Blockchain::new("".to_string(), 1).expect("Failed to create new blockchain")
-    });
+    let db = Database::open("trinitychain.db").expect("Failed to open database");
+    let mut chain = db.load_blockchain().unwrap_or_else(|_| Blockchain::new([0; 32], 1).unwrap());
 
     let start_time = Instant::now();
     let mut blocks_mined = 0;
@@ -479,25 +477,14 @@ async fn mining_loop(
         let new_height = last_block.header.height + 1;
         let difficulty = chain.difficulty;
 
-        let mut mempool_txs = chain.mempool.get_all_transactions();
-        mempool_txs.sort_by_key(|b| std::cmp::Reverse(b.fee()));
-
-        let total_fees: f64 = mempool_txs
-            .iter()
-            .map(|tx| tx.fee_area().to_num::<f64>())
-            .sum();
-        let block_reward = Blockchain::calculate_block_reward(new_height);
-        let total_reward = block_reward + total_fees;
-
+        let mut address = [0u8; 32];
+        hex::decode_to_slice(&beneficiary_address, &mut address).unwrap();
         let coinbase_tx = Transaction::Coinbase(CoinbaseTx {
-            reward_area: trinitychain::geometry::Coord::from_num(total_reward),
-            beneficiary_address: beneficiary_address.clone(),
+            reward_area: trinitychain::geometry::Coord::from_num(1000),
+            beneficiary_address: address,
         });
 
-        let mut transactions = vec![coinbase_tx];
-        transactions.extend(mempool_txs);
-
-        let mut new_block = Block::new(new_height, last_block.hash(), difficulty, transactions);
+        let mut new_block = Block::new(new_height, last_block.hash(), difficulty, vec![coinbase_tx]);
 
         if new_block.header.timestamp <= last_block.header.timestamp {
             new_block.header.timestamp = last_block.header.timestamp + 1;
@@ -507,26 +494,17 @@ async fn mining_loop(
         {
             let mut s = stats.lock().await;
             s.mining_status = format!("Mining block #{}...", new_height);
-            s.difficulty = difficulty;
+            s.difficulty = difficulty as u64;
         }
 
         let mine_start = Instant::now();
-
-        // Mine the block
-        let new_block = if _threads > 1 {
-            mine_block_parallel(new_block)
-        } else {
-            mine_block(new_block)
-        };
-
-        let new_block = match new_block {
-            Ok(block) => block,
+        let new_block = match trinitychain::miner::mine_block(new_block) {
+            Ok(b) => b,
             Err(_) => {
                 sleep(Duration::from_secs(1)).await;
                 continue;
             }
         };
-
         let mine_duration = mine_start.elapsed().as_secs_f64();
         let hash_hex = hex::encode(new_block.hash());
 
@@ -540,8 +518,7 @@ async fn mining_loop(
             network.broadcast_block(&new_block).await;
         }
 
-        if let Err(_e) = db.save_blockchain_state(&new_block, &chain.state, chain.difficulty as u64)
-        {
+        if let Err(_e) = db.save_blockchain_state(&new_block, &chain.state, chain.difficulty as u64) {
             // Handle error silently
         }
 
@@ -551,19 +528,6 @@ async fn mining_loop(
         // Update stats
         {
             let current_height = new_height;
-            let current_supply: f64 = chain
-                .blocks
-                .iter()
-                .flat_map(|b| &b.transactions)
-                .filter_map(|tx| {
-                    if let Transaction::Coinbase(ctx) = tx {
-                        Some(ctx.reward_area.to_num::<f64>())
-                    } else {
-                        None
-                    }
-                })
-                .sum();
-            let current_reward = Blockchain::calculate_block_reward(current_height);
             let halving_era = current_height / 210_000;
             let blocks_to_halving = ((halving_era + 1) * 210_000).saturating_sub(current_height);
 
@@ -574,9 +538,7 @@ async fn mining_loop(
             s.chain_height = current_height;
             s.uptime_secs = elapsed.as_secs();
             s.avg_block_time = elapsed.as_secs_f64() / blocks_mined as f64;
-            s.current_reward = current_reward;
             s.total_earned = blocks_mined as f64 * 1000.0;
-            s.current_supply = current_supply;
             s.blocks_to_halving = blocks_to_halving;
             s.halving_era = halving_era;
             s.mining_status = format!("✓ Block #{} mined!", new_height);

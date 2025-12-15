@@ -24,7 +24,6 @@ use tokio::sync::{Mutex, RwLock};
 use tower_http::cors::{Any, CorsLayer};
 use trinitychain::blockchain::Blockchain;
 use trinitychain::config::load_config;
-use trinitychain::error::ApiError;
 use trinitychain::persistence::Database;
 
 #[derive(Clone)]
@@ -60,20 +59,22 @@ struct ServerData {
     stats: Arc<Mutex<ServerStats>>,
 }
 
-async fn get_stats(State(state): State<ServerData>) -> Result<Json<Value>, ApiError> {
+async fn get_stats(State(state): State<ServerData>) -> Json<Value> {
+    let _ = state;
     let stats = state.stats.lock().await;
     let chain = state.chain.read().await;
 
-    Ok(Json(json!({
+    Json(json!({
         "chainHeight": chain.blocks.last().map(|b| b.header.height).unwrap_or(0),
         "difficulty": chain.difficulty,
         "totalSupply": 0,
         "maxSupply": 420000000,
         "uptime": stats.uptime_secs,
-    })))
+    }))
 }
 
-async fn get_blocks(State(state): State<ServerData>) -> Result<Json<Value>, ApiError> {
+async fn get_blocks(State(state): State<ServerData>) -> Json<Value> {
+    let _ = state;
     let chain = state.chain.read().await;
 
     let blocks: Vec<_> = chain
@@ -94,7 +95,7 @@ async fn get_blocks(State(state): State<ServerData>) -> Result<Json<Value>, ApiE
         })
         .collect();
 
-    Ok(Json(json!({"blocks": blocks})))
+    Json(json!({"blocks": blocks}))
 }
 
 fn draw_ui(f: &mut ratatui::Frame, stats: &ServerStats) {
@@ -260,7 +261,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db = Database::open(&config.database.path).expect("Failed to open database");
     let chain = db.load_blockchain().unwrap_or_else(|_| {
-        Blockchain::new("".to_string(), 1).expect("Failed to create new blockchain")
+        Blockchain::new([0; 32], 1).expect("Failed to create new blockchain")
     });
 
     let state = ServerData {
